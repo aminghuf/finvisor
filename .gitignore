@@ -1,0 +1,15 @@
+# personal financial data — never commit
+data/
+chart.html
+categories.local.json
+*.pem
+*.key
+.env
+
+# local tooling
+.venv/
+__pycache__/
+.claude/
+CLAUDE.md
+probe.py
+probe2.py

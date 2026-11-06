@@ -1,11 +1,673 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><title>financevisor</title></head>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finvisor</title>
+<meta name="description" content="Private, in-browser analysis of a Revolut / Enable Banking transaction export.">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f6f6f4;
+  --surface: #fcfcfb;
+  --surface-2: #f0efec;
+  --border: #e3e2dd;
+  --text: #0b0b0b;
+  --text-2: #52514e;
+  --text-3: #7a7974;
+  --grid: #e8e7e3;
+  --accent: #2a78d6;
+  --s1: #2a78d6;   /* card spending */
+  --s2: #eb6834;   /* money in */
+  --seq: #2a78d6;
+  --good: #1e7f3c;
+  --bad: #c0392b;
+  --focus: #2a78d6;
+  --shadow: 0 1px 2px rgba(0,0,0,.04), 0 1px 1px rgba(0,0,0,.03);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121211; --surface: #1a1a19; --surface-2: #232321; --border: #2e2e2b;
+    --text: #f0efec; --text-2: #c3c2b7; --text-3: #8f8e86; --grid: #2a2a28;
+    --accent: #3987e5; --s1: #3987e5; --s2: #d95926; --seq: #3987e5;
+    --good: #4cbb6c; --bad: #e66767; --focus: #3987e5;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121211; --surface: #1a1a19; --surface-2: #232321; --border: #2e2e2b;
+  --text: #f0efec; --text-2: #c3c2b7; --text-3: #8f8e86; --grid: #2a2a28;
+  --accent: #3987e5; --s1: #3987e5; --s2: #d95926; --seq: #3987e5;
+  --good: #4cbb6c; --bad: #e66767; --focus: #3987e5;
+  --shadow: none;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 64px; }
+header.top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+header.top h1 { font-size: 20px; margin: 0; letter-spacing: -.01em; }
+header.top .sub { color: var(--text-3); font-size: 13px; }
+header.top .spacer { flex: 1; }
+button, select, input[type=search] {
+  font: inherit; color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px;
+}
+button { cursor: pointer; }
+button:hover { background: var(--surface-2); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.primary:hover { filter: brightness(1.08); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px; box-shadow: var(--shadow); min-width: 0;
+}
+.card h2 { font-size: 14px; margin: 0 0 2px; font-weight: 600; }
+.card .hint { color: var(--text-3); font-size: 12px; margin: 0 0 12px; }
+.banner {
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  border: 1px solid var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border-radius: 12px; padding: 12px 16px; margin-bottom: 16px;
+}
+.banner code { font: 13px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; background: var(--surface); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); }
+.drop {
+  border: 2px dashed var(--border); border-radius: 14px; padding: 48px 20px; text-align: center;
+  background: var(--surface); transition: border-color .15s, background .15s;
+}
+.drop.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
+.drop h2 { margin: 0 0 6px; font-size: 18px; }
+.drop p { color: var(--text-2); margin: 6px auto; max-width: 560px; }
+.drop pre { display: inline-block; text-align: left; background: var(--surface-2); padding: 10px 14px; border-radius: 8px; font-size: 12.5px; overflow-x: auto; max-width: 100%; }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+.filters label { color: var(--text-3); font-size: 12px; margin-right: -2px; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; border-radius: 0; padding: 6px 10px; background: transparent; color: var(--text-2); }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button[aria-pressed=true] { background: var(--surface-2); color: var(--text); font-weight: 600; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.kpi .label { color: var(--text-2); font-size: 12.5px; }
+.kpi .value { font-size: 24px; font-weight: 650; letter-spacing: -.02em; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.kpi .foot { color: var(--text-3); font-size: 12px; margin-top: 2px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+@media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+.mb { margin-bottom: 16px; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-2); margin-bottom: 8px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+svg text { fill: var(--text-3); font-size: 11px; font-family: inherit; }
+.chart { position: relative; }
+.tip {
+  position: fixed; pointer-events: none; z-index: 10; background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12.5px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12); display: none; min-width: 140px;
+}
+.tip b { display: block; margin-bottom: 4px; }
+.tip .row { display: flex; justify-content: space-between; gap: 14px; font-variant-numeric: tabular-nums; }
+.tip .row i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+.hbars { display: grid; gap: 6px; }
+.hbar { display: grid; grid-template-columns: minmax(90px, 34%) 1fr auto; gap: 10px; align-items: center; font-size: 13px; cursor: pointer; border-radius: 6px; padding: 2px 4px; margin: 0 -4px; }
+.hbar:hover, .hbar.active { background: var(--surface-2); }
+.hbar .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.hbar .track { height: 12px; position: relative; }
+.hbar .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--seq); border-radius: 0 4px 4px 0; min-width: 2px; }
+.hbar .val { font-variant-numeric: tabular-nums; color: var(--text-2); text-align: right; min-width: 92px; }
+.hbar .val small { color: var(--text-3); margin-left: 4px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--text-3); font-weight: 500; font-size: 12px; white-space: nowrap; }
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--text); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.neg { color: var(--text); }
+td.pos { color: var(--good); }
+td.desc { max-width: 380px; overflow-wrap: anywhere; }
+.tag { display: inline-block; font-size: 11.5px; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); white-space: nowrap; }
+.table-scroll { overflow-x: auto; }
+.tx-tools { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
+.tx-tools input[type=search] { flex: 1; min-width: 180px; }
+.muted { color: var(--text-3); }
+.empty { color: var(--text-3); padding: 12px 0; }
+.foot-note { color: var(--text-3); font-size: 12px; margin-top: 28px; text-align: center; }
+.hidden { display: none !important; }
+.chip-clear { font-size: 12px; padding: 2px 8px; }
+@media (max-width: 560px) {
+  .kpi .value { font-size: 20px; }
+  .hbar { grid-template-columns: minmax(80px, 38%) 1fr; }
+  .hbar .val { grid-column: 1 / -1; text-align: left; min-width: 0; margin-top: -4px; }
+  td.desc { max-width: 200px; }
+}
+</style>
+</head>
 <body>
-<h1>Connected</h1>
-<p>Copy the code, then close this tab.</p>
-<pre id="code" style="word-break:break-all;background:#f3f3f3;padding:1em"></pre>
+<div class="wrap">
+  <header class="top">
+    <h1>Finvisor</h1>
+    <span class="sub" id="dataInfo">Personal-finance dashboard · runs entirely in your browser</span>
+    <span class="spacer"></span>
+    <input type="file" id="fileInput" accept=".csv,text/csv" hidden>
+    <button id="loadBtn">Load CSV…</button>
+    <button id="forgetBtn" class="hidden" title="Remove the cached copy from this browser">Forget data</button>
+    <button id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">◐</button>
+  </header>
+
+  <div id="codeBanner" class="banner hidden" role="status">
+    <strong>Bank connected.</strong>
+    <span>Copy this authorization code back to <code>connect.py --code …</code>:</span>
+    <code id="codeValue"></code>
+    <button id="copyCode">Copy</button>
+  </div>
+
+  <section id="dropZone" class="drop">
+    <h2>Drop your <code>transactions.csv</code> here</h2>
+    <p>Or use <b>Load CSV…</b>. The file is parsed locally — nothing is uploaded anywhere.
+       It's produced by <code>connect.py</code> in <code>data/transactions.csv</code>.</p>
+    <p class="muted">Running locally? Serve the project folder and the dashboard loads <code>data/transactions.csv</code> automatically:</p>
+    <pre>python3 -m http.server 8000   # then open http://localhost:8000</pre>
+  </section>
+
+  <main id="dash" class="hidden">
+    <div class="filters" role="group" aria-label="Filters">
+      <label for="acctSel">Account</label>
+      <select id="acctSel"></select>
+      <label>Period</label>
+      <div class="seg" id="rangeSeg">
+        <button data-r="3">3M</button><button data-r="6">6M</button><button data-r="12">12M</button><button data-r="ytd">YTD</button><button data-r="all">All</button>
+      </div>
+      <span class="muted" id="rangeLabel"></span>
+    </div>
+
+    <section class="kpis" id="kpis"></section>
+
+    <section class="card mb">
+      <h2>Monthly card spending vs money in</h2>
+      <p class="hint">Card spending = card payments only. Money in = top-ups and rewards. Transfers between pockets and to people are excluded. Click a month to filter the transactions below.</p>
+      <div class="legend"><span><i style="background:var(--s1)"></i>Card spending</span><span><i style="background:var(--s2)"></i>Money in</span></div>
+      <div class="chart" id="monthlyChart"></div>
+    </section>
+
+    <div class="grid2">
+      <section class="card">
+        <h2>Spending by category</h2>
+        <p class="hint">Keyword rules from <code>categories.json</code>. Click a category to filter.</p>
+        <div class="hbars" id="catBars"></div>
+      </section>
+      <section class="card">
+        <h2>Top merchants</h2>
+        <p class="hint">Card spending in the selected period. Click to filter.</p>
+        <div class="hbars" id="merchBars"></div>
+      </section>
+    </div>
+
+    <div class="grid2">
+      <section class="card">
+        <h2>Recurring charges</h2>
+        <p class="hint">Merchants charged 3+ times roughly monthly (median gap 20–40 days).</p>
+        <div class="table-scroll"><table id="subsTable"></table></div>
+      </section>
+      <section class="card">
+        <h2>Where money went (all outflows)</h2>
+        <p class="hint">Card spending is only part of it — transfers to people and fees too.</p>
+        <div class="hbars" id="flowBars"></div>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>Transactions</h2>
+      <p class="hint" id="txHint"></p>
+      <div class="tx-tools">
+        <input type="search" id="txSearch" placeholder="Search description or counterparty…" aria-label="Search transactions">
+        <select id="flowSel" aria-label="Flow filter"></select>
+        <select id="catSel" aria-label="Category filter"></select>
+        <button id="clearFilters" class="chip-clear">Clear filters</button>
+        <button id="exportBtn" class="chip-clear" title="Download the filtered rows as CSV">Export</button>
+      </div>
+      <div class="table-scroll"><table id="txTable"></table></div>
+      <div style="text-align:center;margin-top:10px"><button id="moreBtn" class="hidden">Show more</button></div>
+    </section>
+  </main>
+
+  <p class="foot-note">Finvisor · data stays on this device · <a href="https://github.com/aminghuf/finvisor" style="color:inherit">source</a></p>
+</div>
+<div class="tip" id="tip"></div>
+
 <script>
-  const code = new URLSearchParams(location.search).get("code");
-  document.getElementById("code").textContent = code || "No code in URL";
+"use strict";
+// ---------- rules (mirrors analyze.py; loaded from categories.json when available) ----------
+let RULES = null;
+const FALLBACK_RULES = { categories: [], internal_patterns: ["instant access savings", "savings"] };
+const LS_KEY = "finvisor.csv.v1";
+
+const $ = (s) => document.querySelector(s);
+const fmt = new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+const fmt2 = new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const norm = (s) => (s || "").trim().toLowerCase();
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const monthLabel = (m) => MONTHS[+m.slice(5, 7) - 1] + " " + m.slice(2, 4);
+
+// ---------- theme ----------
+(function initTheme() {
+  let saved = null;
+  try { saved = localStorage.getItem("finvisor.theme"); } catch (e) {}
+  if (saved) document.documentElement.dataset.theme = saved;
+  $("#themeBtn").onclick = () => {
+    const cur = document.documentElement.dataset.theme ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    const next = cur === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem("finvisor.theme", next); } catch (e) {}
+    if (state.rows) render();
+  };
+})();
+
+// ---------- consent-code banner (this page is the Enable Banking redirect URL) ----------
+(function codeBanner() {
+  const p = new URLSearchParams(location.search);
+  const code = p.get("code"), err = p.get("error");
+  if (!code && !err) return;
+  $("#codeBanner").classList.remove("hidden");
+  if (code) {
+    $("#codeValue").textContent = code;
+    $("#copyCode").onclick = async () => {
+      try { await navigator.clipboard.writeText(code); $("#copyCode").textContent = "Copied"; }
+      catch (e) { $("#copyCode").textContent = "Select & copy manually"; }
+    };
+  } else {
+    $("#codeBanner").innerHTML = "<strong>Authorization failed:</strong> <code></code>";
+    $("#codeBanner code").textContent = err + (p.get("error_description") ? " — " + p.get("error_description") : "");
+  }
+})();
+
+// ---------- CSV ----------
+function parseCSV(text) {
+  const rows = []; let row = [], field = "", i = 0, q = false;
+  if (text.charCodeAt(0) === 0xfeff) i = 1;
+  for (; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else q = false; }
+      else field += c;
+    } else if (c === '"') q = true;
+    else if (c === ",") { row.push(field); field = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(field); rows.push(row); row = []; field = "";
+    } else field += c;
+  }
+  if (field !== "" || row.length) { row.push(field); rows.push(row); }
+  const head = rows.shift() || [];
+  return rows.filter((r) => r.length > 1).map((r) => Object.fromEntries(head.map((h, j) => [h, r[j] ?? ""])));
+}
+function toCSV(rows, cols) {
+  const q = (v) => { v = String(v ?? ""); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  return [cols.join(","), ...rows.map((r) => cols.map((c) => q(r[c])).join(","))].join("\n");
+}
+
+// ---------- classification (same rules as analyze.py) ----------
+function categorize(desc) {
+  const d = norm(desc);
+  for (const c of RULES.categories) for (const kw of c.keywords) if (d.includes(kw)) return c.name;
+  return "other";
+}
+function classify(r) {
+  const code = (r.bank_code || "").split(":")[0];
+  const desc = norm(r.description);
+  if (code === "CARD_PAYMENT") return "spending";
+  if (["CARD_REFUND", "CARD_CREDIT", "CARD_CHARGEBACK"].includes(code)) return "refund";
+  if (code === "TOPUP" || code === "REWARD") return "income";
+  if (code === "CHARGE" || code === "FEE") return "fee";
+  if (code === "EXCHANGE") return "internal";
+  if (code === "TRANSFER") {
+    if (RULES.internal_patterns.some((p) => desc.includes(p))) return "internal";
+    if (desc.includes(" | ") || desc.startsWith("from ") || desc.startsWith("to ")) return "p2p";
+    return "transfer";
+  }
+  return "other";
+}
+const FLOW_LABEL = { spending: "Card spending", income: "Money in", fee: "Fees", refund: "Refunds", p2p: "To/from people", internal: "Own pockets", transfer: "Other transfers", other: "Other" };
+
+// ---------- state ----------
+const state = {
+  rows: null, accounts: [], account: "all", range: "12", month: null,
+  search: "", flow: "all", cat: "all", merchant: null, sortKey: "booking_date", sortDir: -1, shown: 100,
+};
+
+function ingest(text, source) {
+  const raw = parseCSV(text);
+  if (!raw.length || !("booking_date" in raw[0]) || !("signed_amount" in raw[0])) {
+    alert("That doesn't look like a Finvisor transactions.csv (needs booking_date, signed_amount, description, bank_code columns).");
+    return false;
+  }
+  const seen = new Set();
+  const rows = [];
+  for (const r of raw) {
+    const key = r.entry_reference || r.transaction_id;
+    if (key) { if (seen.has(key)) continue; seen.add(key); }
+    if (!/^\d{4}-\d{2}-\d{2}/.test(r.booking_date)) continue;
+    r.amt = parseFloat(r.signed_amount) || 0;
+    r.month = r.booking_date.slice(0, 7);
+    r.flow = classify(r);
+    r.cat = r.flow === "spending" ? categorize(r.description) : null;
+    r.merchant = norm(r.description);
+    rows.push(r);
+  }
+  state.rows = rows;
+  const accts = [...new Set(rows.map((r) => r.account_uid))];
+  const counts = Object.fromEntries(accts.map((a) => [a, rows.filter((r) => r.account_uid === a).length]));
+  accts.sort((a, b) => counts[b] - counts[a]);
+  state.accounts = accts;
+  $("#acctSel").innerHTML = '<option value="all">All accounts</option>' +
+    accts.map((a, i) => `<option value="${esc(a)}">${i === 0 ? "Main" : "Account " + (i + 1)} · ${esc(a.slice(0, 8))} (${counts[a]})</option>`).join("");
+  $("#dropZone").classList.add("hidden");
+  $("#dash").classList.remove("hidden");
+  const dates = rows.map((r) => r.booking_date).sort();
+  $("#dataInfo").textContent = `${rows.length.toLocaleString()} transactions · ${dates[0]} → ${dates[dates.length - 1]} · ${source}`;
+  render();
+  return true;
+}
+
+// ---------- filtering ----------
+function monthsInRange() {
+  const all = [...new Set(state.rows.map((r) => r.month))].sort();
+  if (!all.length) return [];
+  const last = all[all.length - 1];
+  const [ly, lm] = last.split("-").map(Number);
+  let first = all[0];
+  if (state.range === "ytd") first = `${ly}-01`;
+  else if (state.range !== "all") {
+    const n = +state.range, d = new Date(Date.UTC(ly, lm - 1 - (n - 1), 1));
+    first = d.toISOString().slice(0, 7);
+    if (first < all[0]) first = all[0];
+  }
+  const out = []; let [y, m] = first.split("-").map(Number);
+  while (true) {
+    const k = `${y}-${String(m).padStart(2, "0")}`; out.push(k);
+    if (k >= last) break;
+    if (++m > 12) { m = 1; y++; }
+  }
+  return out;
+}
+function baseRows(months) {
+  const set = new Set(months);
+  return state.rows.filter((r) => set.has(r.month) && (state.account === "all" || r.account_uid === state.account));
+}
+
+// ---------- render ----------
+function render() {
+  const months = monthsInRange();
+  if (state.month && !months.includes(state.month)) state.month = null;
+  const rows = baseRows(months);
+  const scope = state.month ? rows.filter((r) => r.month === state.month) : rows;
+  $("#rangeLabel").textContent = months.length ? `${monthLabel(months[0])} – ${monthLabel(months[months.length - 1])}` + (state.month ? ` · showing ${monthLabel(state.month)}` : "") : "";
+  document.querySelectorAll("#rangeSeg button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.r === state.range));
+  renderKPIs(scope, state.month ? 1 : months.length);
+  renderMonthly(rows, months);
+  renderCats(scope);
+  renderMerchants(scope);
+  renderSubs(rows);
+  renderFlows(scope);
+  renderTx(scope);
+}
+
+function sum(rows, f) { let s = 0; for (const r of rows) s += f(r); return s; }
+
+function renderKPIs(rows, nMonths) {
+  const spend = sum(rows.filter((r) => r.flow === "spending"), (r) => -r.amt);
+  const refund = sum(rows.filter((r) => r.flow === "refund"), (r) => r.amt);
+  const income = sum(rows.filter((r) => r.flow === "income"), (r) => r.amt);
+  const fees = sum(rows.filter((r) => r.flow === "fee"), (r) => -r.amt);
+  const p2p = rows.filter((r) => r.flow === "p2p");
+  const p2pNet = sum(p2p, (r) => r.amt);
+  const nSpend = rows.filter((r) => r.flow === "spending").length;
+  const k = [
+    ["Card spending", fmt.format(spend), `${nSpend.toLocaleString()} payments · ${fmt.format(refund)} refunded`],
+    ["Avg per month", fmt.format(nMonths ? spend / nMonths : 0), `card spending over ${nMonths} month${nMonths === 1 ? "" : "s"}`],
+    ["Money in", fmt.format(income), "top-ups & rewards"],
+    ["Net with people", (p2pNet >= 0 ? "+" : "−") + fmt.format(Math.abs(p2pNet)).replace("-", ""), `${p2p.length.toLocaleString()} P2P transfers`],
+    ["Fees", fmt2.format(fees), "plan & card fees"],
+  ];
+  $("#kpis").innerHTML = k.map(([l, v, f]) => `<div class="card kpi"><div class="label">${l}</div><div class="value">${v}</div><div class="foot">${f}</div></div>`).join("");
+}
+
+const tip = $("#tip");
+function showTip(e, html) {
+  tip.innerHTML = html; tip.style.display = "block";
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + w > innerWidth - 8) x = e.clientX - w - 14;
+  if (y + h > innerHeight - 8) y = e.clientY - h - 14;
+  tip.style.left = Math.max(8, x) + "px"; tip.style.top = Math.max(8, y) + "px";
+}
+const hideTip = () => (tip.style.display = "none");
+
+function niceMax(v) {
+  if (v <= 0) return 100;
+  const p = Math.pow(10, Math.floor(Math.log10(v))), n = v / p;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p;
+}
+function barPath(x, y, w, h, r) {
+  if (h <= 0) return "";
+  r = Math.min(r, w / 2, h);
+  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+}
+
+function renderMonthly(rows, months) {
+  const el = $("#monthlyChart");
+  const data = months.map((m) => ({ m, spend: 0, income: 0, n: 0 }));
+  const idx = Object.fromEntries(months.map((m, i) => [m, i]));
+  for (const r of rows) {
+    const d = data[idx[r.month]]; if (!d) continue;
+    if (r.flow === "spending") { d.spend -= r.amt; d.n++; }
+    else if (r.flow === "income") d.income += r.amt;
+  }
+  const W = Math.max(320, el.clientWidth || 800), H = 260, ml = 48, mr = 8, mt = 10, mb = 26;
+  const iw = W - ml - mr, ih = H - mt - mb;
+  const max = niceMax(Math.max(1, ...data.map((d) => Math.max(d.spend, d.income))));
+  const band = iw / Math.max(1, data.length);
+  const gap = 2, bw = Math.max(2, Math.min(18, (band * 0.7 - gap) / 2));
+  const y = (v) => mt + ih - (v / max) * ih;
+  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Monthly card spending and money in">`;
+  for (let i = 0; i <= 4; i++) {
+    const v = (max / 4) * i, yy = y(v);
+    s += `<line x1="${ml}" x2="${W - mr}" y1="${yy}" y2="${yy}" stroke="var(--grid)" ${i === 0 ? 'stroke="var(--border)"' : ""}/>`;
+    s += `<text x="${ml - 6}" y="${yy + 4}" text-anchor="end">${v >= 1000 ? "€" + (v / 1000).toFixed(v % 1000 ? 1 : 0) + "k" : "€" + v}</text>`;
+  }
+  const every = Math.ceil(data.length / Math.max(1, Math.floor(iw / 48)));
+  data.forEach((d, i) => {
+    const cx = ml + band * i + band / 2;
+    const sel = state.month === d.m, dim = state.month && !sel;
+    const op = dim ? 0.35 : 1;
+    s += `<path d="${barPath(cx - bw - gap / 2, y(d.spend), bw, ih + mt - y(d.spend), 4)}" fill="var(--s1)" opacity="${op}"/>`;
+    s += `<path d="${barPath(cx + gap / 2, y(d.income), bw, ih + mt - y(d.income), 4)}" fill="var(--s2)" opacity="${op}"/>`;
+    if (i % every === 0 || sel) s += `<text x="${cx}" y="${H - 8}" text-anchor="middle" ${sel ? 'style="fill:var(--text);font-weight:600"' : ""}>${monthLabel(d.m)}</text>`;
+    s += `<rect class="hit" data-i="${i}" x="${ml + band * i}" y="${mt}" width="${band}" height="${ih}" fill="transparent" style="cursor:pointer"/>`;
+  });
+  s += `</svg>`;
+  el.innerHTML = s;
+  el.querySelectorAll(".hit").forEach((h) => {
+    const d = data[+h.dataset.i];
+    h.addEventListener("mousemove", (e) => {
+      h.setAttribute("fill", "color-mix(in srgb, var(--text) 5%, transparent)");
+      showTip(e, `<b>${monthLabel(d.m)}</b>
+        <div class="row"><span><i style="background:var(--s1)"></i>Card spending</span><span>${fmt.format(d.spend)}</span></div>
+        <div class="row"><span><i style="background:var(--s2)"></i>Money in</span><span>${fmt.format(d.income)}</span></div>
+        <div class="row muted"><span>Payments</span><span>${d.n}</span></div>`);
+    });
+    h.addEventListener("mouseleave", () => { h.setAttribute("fill", "transparent"); hideTip(); });
+    h.addEventListener("click", () => { state.month = state.month === d.m ? null : d.m; state.shown = 100; hideTip(); render(); });
+  });
+}
+
+function hbars(el, items, total, activeKey, onClick, labelFn) {
+  if (!items.length) { el.innerHTML = '<div class="empty">Nothing in this period.</div>'; return; }
+  const max = items[0][1];
+  el.innerHTML = items.map(([k, v, extra]) => `
+    <div class="hbar ${k === activeKey ? "active" : ""}" data-k="${esc(k)}" tabindex="0" role="button" aria-pressed="${k === activeKey}">
+      <span class="name" title="${esc(k)}">${esc(labelFn ? labelFn(k) : k)}</span>
+      <span class="track"><span class="fill" style="width:${Math.max(0.5, (100 * v) / max)}%"></span></span>
+      <span class="val">${fmt.format(v)}<small>${extra ?? (total ? Math.round((100 * v) / total) + "%" : "")}</small></span>
+    </div>`).join("");
+  if (onClick) el.querySelectorAll(".hbar").forEach((b) => {
+    b.onclick = () => onClick(b.dataset.k);
+    b.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(b.dataset.k); } };
+  });
+}
+
+function renderCats(rows) {
+  const by = {};
+  let total = 0;
+  for (const r of rows) if (r.flow === "spending") { by[r.cat] = (by[r.cat] || 0) - r.amt; total -= r.amt; }
+  const items = Object.entries(by).sort((a, b) => b[1] - a[1]);
+  hbars($("#catBars"), items, total, state.cat, (k) => { state.cat = state.cat === k ? "all" : k; state.merchant = null; state.shown = 100; render(); });
+}
+function renderMerchants(rows) {
+  const by = {}, n = {};
+  for (const r of rows) if (r.flow === "spending") { by[r.merchant] = (by[r.merchant] || 0) - r.amt; n[r.merchant] = (n[r.merchant] || 0) + 1; }
+  const items = Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k, v]) => [k, v, `×${n[k]}`]);
+  hbars($("#merchBars"), items, 0, state.merchant, (k) => { state.merchant = state.merchant === k ? null : k; state.shown = 100; render(); });
+}
+function renderFlows(rows) {
+  const by = {};
+  let total = 0;
+  for (const r of rows) if (r.amt < 0 && r.flow !== "internal") { by[r.flow] = (by[r.flow] || 0) - r.amt; total -= r.amt; }
+  const items = Object.entries(by).sort((a, b) => b[1] - a[1]);
+  hbars($("#flowBars"), items, total, state.flow, (k) => { state.flow = state.flow === k ? "all" : k; state.shown = 100; render(); }, (k) => FLOW_LABEL[k] || k);
+}
+
+function renderSubs(rows) {
+  const by = {};
+  for (const r of rows) if (r.flow === "spending") (by[r.merchant] ||= []).push(r);
+  const subs = [];
+  for (const [m, txs] of Object.entries(by)) {
+    if (txs.length < 3) continue;
+    const dates = txs.map((t) => t.booking_date).sort();
+    const gaps = [];
+    for (let i = 1; i < dates.length; i++) gaps.push((Date.parse(dates[i]) - Date.parse(dates[i - 1])) / 864e5);
+    const g = [...gaps].sort((a, b) => a - b)[Math.floor(gaps.length / 2)];
+    if (g < 20 || g > 40) continue;
+    const total = sum(txs, (t) => -t.amt);
+    subs.push({ m, n: txs.length, avg: total / txs.length, total, last: dates[dates.length - 1] });
+  }
+  subs.sort((a, b) => b.total - a.total);
+  const t = $("#subsTable");
+  if (!subs.length) { t.innerHTML = '<tr><td class="empty">None detected in this period.</td></tr>'; return; }
+  t.innerHTML = `<thead><tr><th>Merchant</th><th class="num">Times</th><th class="num">Avg</th><th class="num">Total</th><th>Last</th></tr></thead><tbody>` +
+    subs.slice(0, 12).map((s) => `<tr><td class="desc">${esc(s.m)}</td><td class="num">${s.n}</td><td class="num">${fmt2.format(s.avg)}</td><td class="num">${fmt.format(s.total)}</td><td class="muted">${s.last}</td></tr>`).join("") + "</tbody>";
+}
+
+function filteredTx(rows) {
+  const q = norm(state.search);
+  let out = rows.filter((r) =>
+    (state.flow === "all" || r.flow === state.flow) &&
+    (state.cat === "all" || r.cat === state.cat) &&
+    (!state.merchant || r.merchant === state.merchant) &&
+    (!q || norm(r.description).includes(q) || norm(r.counterparty).includes(q)));
+  const k = state.sortKey, d = state.sortDir;
+  out.sort((a, b) => (k === "amt" ? a.amt - b.amt : a[k] < b[k] ? -1 : a[k] > b[k] ? 1 : 0) * d);
+  return out;
+}
+
+function renderTx(rows) {
+  const flows = [...new Set(rows.map((r) => r.flow))];
+  $("#flowSel").innerHTML = '<option value="all">All flows</option>' + flows.map((f) => `<option value="${f}" ${f === state.flow ? "selected" : ""}>${FLOW_LABEL[f] || f}</option>`).join("");
+  const cats = [...new Set(rows.filter((r) => r.cat).map((r) => r.cat))].sort();
+  $("#catSel").innerHTML = '<option value="all">All categories</option>' + cats.map((c) => `<option ${c === state.cat ? "selected" : ""}>${esc(c)}</option>`).join("");
+  const list = filteredTx(rows);
+  state.lastList = list;
+  const net = sum(list, (r) => r.amt);
+  const bits = [];
+  if (state.month) bits.push(monthLabel(state.month));
+  if (state.cat !== "all") bits.push("category: " + state.cat);
+  if (state.flow !== "all") bits.push(FLOW_LABEL[state.flow] || state.flow);
+  if (state.merchant) bits.push("merchant: " + state.merchant);
+  $("#txHint").textContent = `${list.length.toLocaleString()} rows · net ${fmt2.format(net)}` + (bits.length ? " · " + bits.join(" · ") : "");
+  const arrow = (k) => (state.sortKey === k ? (state.sortDir < 0 ? " ↓" : " ↑") : "");
+  const t = $("#txTable");
+  t.innerHTML = `<thead><tr>
+      <th class="sortable" data-k="booking_date">Date${arrow("booking_date")}</th>
+      <th class="sortable" data-k="description">Description${arrow("description")}</th>
+      <th>Flow</th><th>Category</th>
+      <th class="sortable num" data-k="amt">Amount${arrow("amt")}</th></tr></thead><tbody>` +
+    (list.length ? list.slice(0, state.shown).map((r) => `<tr>
+      <td class="muted" style="white-space:nowrap">${r.booking_date}</td>
+      <td class="desc">${esc(r.description)}${r.counterparty && r.counterparty !== r.description ? `<div class="muted">${esc(r.counterparty)}</div>` : ""}</td>
+      <td><span class="tag">${FLOW_LABEL[r.flow] || r.flow}</span></td>
+      <td>${r.cat ? `<span class="tag">${esc(r.cat)}</span>` : ""}</td>
+      <td class="num ${r.amt < 0 ? "neg" : "pos"}">${r.amt > 0 ? "+" : ""}${fmt2.format(r.amt)}</td></tr>`).join("")
+      : '<tr><td colspan="5" class="empty">No matching transactions.</td></tr>') + "</tbody>";
+  t.querySelectorAll("th.sortable").forEach((th) => th.onclick = () => {
+    const k = th.dataset.k;
+    if (state.sortKey === k) state.sortDir *= -1; else { state.sortKey = k; state.sortDir = k === "description" ? 1 : -1; }
+    renderTx(rows);
+  });
+  const more = $("#moreBtn");
+  more.classList.toggle("hidden", list.length <= state.shown);
+  more.textContent = `Show more (${(list.length - state.shown).toLocaleString()} left)`;
+}
+
+// ---------- wiring ----------
+$("#acctSel").onchange = (e) => { state.account = e.target.value; state.shown = 100; render(); };
+document.querySelectorAll("#rangeSeg button").forEach((b) => b.onclick = () => { state.range = b.dataset.r; state.month = null; state.shown = 100; render(); });
+let searchT;
+$("#txSearch").oninput = (e) => { clearTimeout(searchT); searchT = setTimeout(() => { state.search = e.target.value; state.shown = 100; render(); }, 150); };
+$("#flowSel").onchange = (e) => { state.flow = e.target.value; state.shown = 100; render(); };
+$("#catSel").onchange = (e) => { state.cat = e.target.value; state.shown = 100; render(); };
+$("#clearFilters").onclick = () => { Object.assign(state, { month: null, search: "", flow: "all", cat: "all", merchant: null, shown: 100 }); $("#txSearch").value = ""; render(); };
+$("#moreBtn").onclick = () => { state.shown += 200; render(); };
+$("#exportBtn").onclick = () => {
+  const cols = ["booking_date", "description", "counterparty", "flow", "cat", "signed_amount", "currency", "account_uid"];
+  const blob = new Blob([toCSV(state.lastList || [], cols)], { type: "text/csv" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "finvisor-filtered.csv"; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+let rT; addEventListener("resize", () => { clearTimeout(rT); rT = setTimeout(() => state.rows && render(), 120); });
+
+function loadText(text, source, remember) {
+  if (!ingest(text, source)) return;
+  if (remember) {
+    try { localStorage.setItem(LS_KEY, text); $("#forgetBtn").classList.remove("hidden"); } catch (e) { /* quota / private mode: fine */ }
+  }
+}
+function readFile(f) {
+  if (!f) return;
+  const fr = new FileReader();
+  fr.onload = () => loadText(fr.result, f.name, true);
+  fr.readAsText(f);
+}
+$("#loadBtn").onclick = () => $("#fileInput").click();
+$("#fileInput").onchange = (e) => readFile(e.target.files[0]);
+$("#forgetBtn").onclick = () => {
+  try { localStorage.removeItem(LS_KEY); } catch (e) {}
+  location.reload();
+};
+const dz = $("#dropZone");
+["dragenter", "dragover"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add("over"); }));
+["dragleave", "drop"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); if (ev === "drop" || e.target === dz) dz.classList.remove("over"); }));
+document.addEventListener("drop", (e) => readFile(e.dataTransfer.files[0]));
+
+(async function boot() {
+  try { const r = await fetch("categories.json", { cache: "no-cache" }); if (r.ok) RULES = await r.json(); } catch (e) {}
+  RULES ||= FALLBACK_RULES;
+  // optional personal keyword rules (gitignored, only present when served locally); checked first
+  try {
+    const r = await fetch("categories.local.json", { cache: "no-cache" });
+    if (r.ok) RULES = { ...RULES, categories: [...((await r.json()).categories || []), ...RULES.categories] };
+  } catch (e) {}
+  // 1) local dev: project served from disk -> data/transactions.csv exists (never published)
+  try {
+    const r = await fetch("data/transactions.csv", { cache: "no-cache" });
+    if (r.ok) { const t = await r.text(); if (t.startsWith("account_uid") || t.includes("booking_date")) return loadText(t, "data/transactions.csv", false); }
+  } catch (e) {}
+  // 2) previously loaded file remembered in this browser
+  let cached = null;
+  try { cached = localStorage.getItem(LS_KEY); } catch (e) {}
+  if (cached) { $("#forgetBtn").classList.remove("hidden"); loadText(cached, "cached in this browser", false); }
+})();
 </script>
-</body></html>
+</body>
+</html>

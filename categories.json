@@ -1,0 +1,275 @@
+{
+ "categories": [
+  {
+   "name": "housing",
+   "keywords": [
+    "affitto",
+    "rent",
+    "condominio",
+    "immobiliare",
+    "agenzia immobiliare"
+   ]
+  },
+  {
+   "name": "groceries",
+   "keywords": [
+    "interspar",
+    "supermercati",
+    "conad",
+    "lidl",
+    "coop",
+    "carrefour",
+    "eurospin",
+    "esselunga",
+    "md ",
+    "penny",
+    "decò",
+    "deco",
+    "pam ",
+    "crai",
+    "sigma",
+    "vinci",
+    "alimentari",
+    "mersi"
+   ]
+  },
+  {
+   "name": "dining",
+   "keywords": [
+    "mcdonald",
+    "mc donald",
+    "mcd",
+    "burger",
+    "kfc",
+    "deliveroo",
+    "glovo",
+    "just eat",
+    "justeat",
+    "ristorante",
+    "pizzeria",
+    "pizza",
+    "sushi",
+    "sushifa",
+    "kebab",
+    "paninoteca",
+    "caffè",
+    "caffe",
+    "gelato",
+    "gelateria",
+    "pasticceria",
+    "bakery",
+    "forno",
+    "rosticceria",
+    "trattoria",
+    "osteria",
+    "grill",
+    "tavola calda",
+    "irish pub",
+    "chicken house",
+    "chicchiricc",
+    "hamburger"
+   ]
+  },
+  {
+   "name": "university",
+   "keywords": [
+    "mensa",
+    "papardo",
+    "univers",
+    "er.go",
+    "ersu",
+    "esu",
+    "campus"
+   ]
+  },
+  {
+   "name": "utilities",
+   "keywords": [
+    "enel",
+    "tim ",
+    "vodafone",
+    "windtre",
+    "wind tre",
+    "wind",
+    "iliad",
+    "fastweb",
+    "poste italiane",
+    "postepay",
+    "acqua",
+    "gas",
+    "energia",
+    "telecom",
+    "sky wifi"
+   ]
+  },
+  {
+   "name": "government",
+   "keywords": [
+    "pagopa",
+    "pag pub amm",
+    "gpay nexi",
+    "agenzia entrate",
+    "bollo",
+    "comune di"
+   ]
+  },
+  {
+   "name": "transport",
+   "keywords": [
+    "omio",
+    "trenitalia",
+    "italo",
+    "atm ",
+    "atm milano",
+    "uber",
+    "freenow",
+    "taxi",
+    "benzina",
+    "eni",
+    "q8",
+    "ip ",
+    "esso",
+    "autostrada",
+    "telepass",
+    "bus",
+    "metro",
+    "carburante"
+   ]
+  },
+  {
+   "name": "travel",
+   "keywords": [
+    "booking.com",
+    "flights",
+    "ryanair",
+    "easyjet",
+    "volotea",
+    "wizz air",
+    "airbnb",
+    "hostel",
+    "hotel "
+   ]
+  },
+  {
+   "name": "online-shopping",
+   "keywords": [
+    "amazon",
+    "amzn",
+    "temu",
+    "vinted",
+    "zalando",
+    "shein",
+    "ebay",
+    "aliexpress",
+    "wish",
+    "primark",
+    "h&m",
+    "hm ",
+    "zara",
+    "about you",
+    "asos",
+    "nike",
+    "adidas",
+    "puma",
+    "subito",
+    "sinsay",
+    "bialetti"
+   ]
+  },
+  {
+   "name": "electronics",
+   "keywords": [
+    "xiaomi",
+    "thomann",
+    "musikhaus",
+    "kerschbaum",
+    "mediaworld",
+    "unieuro",
+    "euronics",
+    "samsung",
+    "apple ",
+    "bose",
+    "sony",
+    "logitech",
+    "iphone",
+    "slimq"
+   ]
+  },
+  {
+   "name": "financing",
+   "keywords": [
+    "klarna",
+    "afterpay",
+    "scalapay"
+   ]
+  },
+  {
+   "name": "subscriptions",
+   "keywords": [
+    "youtube",
+    "spotify",
+    "netflix",
+    "prime",
+    "icloud",
+    "google",
+    "chatgpt",
+    "openai",
+    "claude",
+    "anthropic",
+    "perplexity",
+    "deepseek",
+    "midjourney",
+    "copilot",
+    "disney",
+    "hbo",
+    "deezer",
+    "amazon music",
+    "audible",
+    "subscription"
+   ]
+  },
+  {
+   "name": "health",
+   "keywords": [
+    "farmacia",
+    "medico",
+    "dott.",
+    "dentist",
+    "ospedale",
+    "clinica",
+    "analisi",
+    "psicolog",
+    "ottico",
+    "fisioterap",
+    "ottica",
+    "occhiali"
+   ]
+  },
+  {
+   "name": "entertainment",
+   "keywords": [
+    "cinema",
+    "steam",
+    "playstation",
+    "xbox",
+    "eventbrite",
+    "ticketone",
+    "museum",
+    "theatre",
+    "teatro"
+   ]
+  },
+  {
+   "name": "fees",
+   "keywords": [
+    "plan fee",
+    "revolut",
+    "plus repricing"
+   ]
+  }
+ ],
+ "internal_patterns": [
+  "instant access savings",
+  "savings"
+ ]
+}
