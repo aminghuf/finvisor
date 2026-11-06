@@ -1,0 +1,11 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>financevisor</title></head>
+<body>
+<h1>Connected</h1>
+<p>Copy the code, then close this tab.</p>
+<pre id="code" style="word-break:break-all;background:#f3f3f3;padding:1em"></pre>
+<script>
+  const code = new URLSearchParams(location.search).get("code");
+  document.getElementById("code").textContent = code || "No code in URL";
+</script>
+</body></html>
